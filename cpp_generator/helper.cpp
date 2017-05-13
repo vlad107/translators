@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <functional>
 #include <regex>
+#include <fstream>
 
 std::map<std::string, Variable*> vars;
 std::map<std::string, Terminal*> terminals;
@@ -465,5 +466,174 @@ void generate_follow(std::string const &var) {
         }
 
     }
+
+}
+
+uint32_t depth;
+
+std::string const TAB = "    ";
+
+void print_impl(std::ofstream &out, std::string str) {
+
+    for ( uint32_t i = 0; i < depth; i++ ) {
+
+        out << TAB;
+
+    }
+
+    out << str;
+
+}
+
+void print_structure(std::ofstream &out, std::pair<std::string, Variable*> pr) {
+
+    print_impl(out, "struct " + pr.first + " {\n");
+    ++depth;
+
+    print_impl(out, "void parse(" + pr.second->_attr_s + ");\n");
+
+    --depth;
+    print_impl(out, "};\n\n");
+
+}
+
+void print_structures(std::ofstream &out) {
+
+    out << "\n";
+
+    for (auto &pr: vars) {
+
+        print_structure(out, pr);
+
+    }
+
+    out << "\n";
+
+}
+
+void print_header() {
+
+    std::ofstream out("../gen/lib.h", std::ofstream::out);
+
+    out << "#ifndef LIB_H\n";
+    out << "#define LIB_H\n";
+
+    out << "#include <regex>\n";
+    out << "#include <iostream>\n";
+    out << "#include <vector>\n";
+    out << "\n\n";
+
+
+    print_impl(out, "struct Parser {\n\n");
+    ++depth;
+
+    print_impl(out, "std::string s;\n");
+    print_impl(out, "int pos;\n\n");
+
+    print_impl(out, "Parser(std::string s);\n");
+
+    print_structures(out);
+
+    --depth;
+    print_impl(out, "};\n\n");
+
+
+    out << "#endif\n";
+
+    out.close();
+
+}
+
+void print_code() {
+
+    print_header();
+
+//    print_source();
+
+//    std::cout << "std::string s;\n";
+//    std::cout << "size_t pos;\n\n";
+
+//    std::cout << "struct Node {\n";
+//    std::cout << "};\n\n";
+//    for (auto &name: names) {
+//        std::cout << "struct " << name << " : Node {\n";
+//        auto ninfo = info[name];
+//        std::cout << TAB << "std::vector<Node> childs;\n\n";
+
+//        for (auto attr: ninfo->attrs) {
+//            std::cout << TAB << attr << ";\n";
+//        }
+//        if (isupper(name[0])) {
+//            std::cout << TAB << "const std::vector<std::regex> regs = {";
+//            bool first = true;
+//            for (auto &rs: rules_by_name[name][0]->srs) {
+//                if (!first) std::cout << ",";
+//                first = false;
+//                std::cout << "std::regex(\"" << rs << "\")";
+//            }
+//            std::cout << "};\n";
+//        }
+//        std::cout << TAB << "static " << name << " parse(";
+//        bool first = true;
+//        for (auto &attr: ninfo->attrs) {
+//            if (!first) {
+//                std::cout << ",";
+//            }
+//            first = false;
+//            std::cout << trim(attr);
+//        }
+//        std::cout << ");\n";
+//        if (isupper(name[0])) {
+//            std::cout << TAB << "static bool match();\n";
+//        }
+//        std::cout << "};\n";
+//    }
+//    for (auto &name: names) {
+//        auto ninfo = info[name];
+//        //std::cout << "struct " << name << " : Node {\n";
+//        std::cout << "static " << name << " " << name << "::parse(";
+//        bool first = true;
+//        for (auto &attr: ninfo->attrs) {
+//            if (!first) {
+//                std::cout << ",";
+//            }
+//            first = false;
+//            std::cout << trim(attr);
+//        }
+//        std::cout << ") {\n";
+//        if (islower(name[0])) {
+//            // notTerminal
+//            for (auto &rule: rules_by_name[name]) {
+//                rule->first.erase(std::unique(rule->first.begin(), rule->first.end()), rule->first.end());
+//                for (auto &term: rule->first) {
+//                    std::cout << TAB << "if (" << term << "::" << "match())" << " {\n";
+//                    for (auto &chld: rule->childs) {
+//                        std::cout << TAB << TAB << chld.first << "::" << "parse(";
+//                        bool first = false;
+//                        std::cout << chld.second;
+//                        std::cout << ");\n";
+//                    }
+//                    std::cout << TAB << "}\n";
+//                }
+//            }
+//            std::cout <<  "};\n";
+//        } else {
+//            std::cout << "}\n";
+//            // Terminal
+//            for (auto &rule: rules_by_name[name]) {
+//                std::cout << "bool " << name << "::match()" << " {\n";
+//                std::cout << TAB << "for (auto &reg: regs) {\n";
+//                std::cout << TAB << TAB << "for (int i = 1; i <= 10; i++) {\n";
+//                std::cout << TAB << TAB << TAB << "if (std::regex_match(s.begin() + pos, s.begin() + pos + i, reg)) {\n";
+//                std::cout << TAB << TAB << TAB << TAB << "return true;\n";
+//                std::cout << TAB << TAB << TAB << "}\n";
+//                std::cout << TAB << TAB << "}\n";
+//                std::cout << TAB << "}\n";
+//                std::cout << TAB << "return false;\n";
+//                std::cout << "}\n";
+//            }
+//        }
+//    }
+//    std::cout << "int main() {\n}\n";
 
 }

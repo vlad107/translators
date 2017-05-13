@@ -60,4 +60,6 @@ void generate_first(std::string const &var);
 
 void generate_follow(std::string const &var);
 
+void print_code();
+
 #endif // HELPER_H
