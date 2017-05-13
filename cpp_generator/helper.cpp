@@ -3,6 +3,7 @@
 #include <iostream>
 #include <stdint.h>
 #include <functional>
+#include <regex>
 
 std::map<std::string, Variable*> vars;
 std::map<std::string, Terminal*> terminals;
@@ -47,23 +48,50 @@ std::string &normalize(std::string &s, std::string const escaped = "()[]+*\"\'")
 
 std::vector<std::string> &split(const std::string &s, std::function<bool(uint8_t)> issep, std::vector<std::string> &res) {
 
+    const std::string op = "([{\"\'";
+    const std::string cl = ")]}\"\'";
+
     std::string cur;
+    size_t esc = std::string::npos;
     for (auto c: s) {
 
-        if (!issep(c)) {
+        if (esc != std::string::npos) {
 
             cur += c;
+            if (c == cl[esc]) {
+
+                esc = std::string::npos;
+
+            }
 
         } else {
 
-            if (!cur.empty()) {
+            if (!issep(c)) {
 
-                res.push_back(cur);
+                cur += c;
+                esc = op.find(c);
+
+            } else {
+
+                if (!cur.empty()) {
+
+                    res.push_back(cur);
+                    cur = "";
+
+                }
 
             }
 
         }
+
     }
+
+    if (!cur.empty()) {
+
+        res.push_back(cur);
+
+    }
+
     return res;
 }
 
@@ -124,7 +152,6 @@ Variable::Variable(std::string const &attr_s, std::vector<std::string> const &ca
     : _attr_s(attr_s)
 {
 
-    _cases.clear();
     for (auto &cs: cases) {
 
         _cases.emplace_back(cs);
@@ -137,11 +164,20 @@ Terminal::Terminal() {
 }
 
 Terminal::Terminal(std::vector<std::string> const &regexps)
-    : _regexps(regexps) {
+    : _regexps(regexps)
+    , _eps(false) {
 
     for (auto &rg: _regexps) {
+
         trim(rg);
         normalize(rg);
+
+        if (std::regex_match("", std::regex(rg))) {
+
+            _eps = true;
+
+        }
+
     }
 
 }
@@ -255,4 +291,100 @@ void add_rules(std::string s) {
         add_terminal(rule_s, cases);
 
     }
+
+}
+
+void add_first_by_rule(std::vector<std::pair<std::string, std::string>>::iterator const &rule_start,
+                       std::vector<std::pair<std::string, std::string>>::iterator const &rule_end,
+                       std::vector<std::string> &fst) {
+
+    for ( auto it = rule_start; it != rule_end; ++it ) {
+
+        auto child = *it;
+
+        bool isterminal = isupper(child.first[0]);
+        if (isterminal) {
+
+            fst.push_back(child.first);
+            if (terminals[child.first]->_eps) {
+
+                fst.push_back(EPSILON);
+
+            } else {
+
+                break;
+
+            }
+
+        } else {
+
+            generate_first(child.first);
+            fst.insert(fst.end(),
+                       vars[child.first]->_first.begin(),
+                       vars[child.first]->_first.end());
+
+            if (!vars[child.first]->_eps) {
+
+                break;
+
+            }
+
+        }
+
+    }
+}
+
+std::map<std::string, int> color;
+
+void generate_first(std::string const &var) {
+
+    if (vars.find(var) == vars.end()) {
+
+        std::cerr << "WARNING: " << var << " was not declareted" << std::endl;
+        return;
+
+    }
+
+    if (color[var] == 2) return;
+
+    if (color[var] == 1) {
+
+        std::cerr << "WARNING: cyclic grammar" << std::endl;
+        std::cerr << "    trying to define " << var << " via " << var << std::endl;
+        return;
+
+    }
+    color[var] = 1;
+
+    auto *info = vars[var];
+    bool was_eps = false;
+
+    for (auto &cs: info->_cases) {
+
+        if (cs._children.empty()) {
+
+            if (!was_eps) {
+
+                info->_first.push_back(EPSILON);
+
+            }
+
+        } else {
+
+            add_first_by_rule(cs._children.begin(), cs._children.end(), info->_first);
+
+        }
+
+    }
+
+    std::sort(info->_first.begin(), info->_first.end());
+    info->_first.resize(std::unique(info->_first.begin(), info->_first.end()) - info->_first.begin());
+
+    info->_eps = (std::find(info->_first.begin(),
+                            info->_first.end(),
+                            EPSILON)
+                  != info->_first.end());
+
+    color[var] = 2;
+
 }
