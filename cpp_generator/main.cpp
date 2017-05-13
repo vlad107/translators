@@ -23,6 +23,19 @@ int main(int argc, char *argv[]) {
     std::vector<std::string> tokens;
     read_tokens(&tokens);
 
+    std::for_each(tokens.begin(), tokens.end(), add_rules);
+
+    for (const auto &pr: vars) {
+
+        generate_first(pr.first);
+
+    }
+
+    for (const auto &pr: vars) {
+
+        generate_follow(pr.first);
+
+    }
 
     return 0;
 

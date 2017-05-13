@@ -340,7 +340,7 @@ void generate_first(std::string const &var) {
 
     if (vars.find(var) == vars.end()) {
 
-        std::cerr << "WARNING: " << var << " was not declareted" << std::endl;
+        std::cerr << "WARNING: " << var << " was not declarated" << std::endl;
         return;
 
     }
@@ -386,5 +386,84 @@ void generate_first(std::string const &var) {
                   != info->_first.end());
 
     color[var] = 2;
+
+}
+
+void add_follow(std::string const &name, std::vector<std::string> const &follow) {
+
+    if (name.empty()) {
+
+        std::cerr << "WARNING: trying to add follow to the empty entry";
+        return;
+
+    }
+
+    bool isterminal = isupper(name[0]);
+    if (isterminal) {
+
+        auto it = terminals.find(name);
+        if (it == terminals.end()) {
+
+            std::cerr << "WARNING: invalid terminal -- " << name << std::endl;
+
+        } else {
+
+            it->second->_follow.insert(follow.begin(), follow.end());
+
+        }
+
+    } else {
+
+        auto it = vars.find(name);
+        if (it == vars.end()) {
+
+            std::cerr << "WARNING: invalid var -- " << name << std::endl;
+
+        } else {
+
+            it->second->_follow.insert(follow.begin(), follow.end());
+
+        }
+
+    }
+
+}
+
+void generate_follow(std::string const &var) {
+
+    if (vars.find(var) == vars.end()) {
+
+        std::cerr << "WARNING: " << var << " was not declarated" << std::endl;
+        return;
+
+    }
+
+    auto *info = vars[var];
+
+    for (auto &rule: info->_cases) {
+
+        for ( auto it = rule._children.begin(); it != rule._children.end(); ++it ) {
+
+            std::vector<std::string> fst;
+            add_first_by_rule(it + 1, rule._children.end(), fst);
+
+            if (fst.empty()) {
+
+                fst.push_back(DOLLAR);
+
+            }
+            for (auto &cur: fst) {
+                if (cur == EPSILON) {
+
+                    cur = DOLLAR;
+
+                }
+            }
+
+            add_follow(it->first, fst);
+
+        }
+
+    }
 
 }

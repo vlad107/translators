@@ -4,9 +4,11 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <set>
 
 std::string const WS = "\t\r\n ";
 std::string const EPSILON = "EPSILON";
+std::string const DOLLAR = "DOLLAR";
 
 
 struct Rule {
@@ -26,6 +28,7 @@ struct Variable {
     std::vector<Rule> _cases;
     std::vector<std::string> _first;
     bool _eps;
+    std::set<std::string> _follow;
 
 };
 
@@ -36,6 +39,7 @@ struct Terminal {
 
     std::vector<std::string> _regexps;
     bool _eps;
+    std::set<std::string> _follow;
 
 };
 
@@ -54,6 +58,6 @@ void add_rules(std::string s);
 
 void generate_first(std::string const &var);
 
-//void generate_follow(std::string const &var);
+void generate_follow(std::string const &var);
 
 #endif // HELPER_H
