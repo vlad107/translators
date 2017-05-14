@@ -469,6 +469,9 @@ void generate_follow(std::string const &var) {
 
 }
 
+
+
+
 uint32_t depth;
 
 std::string const TAB = "    ";
@@ -487,38 +490,63 @@ void print_impl(std::ofstream &out, std::string str) {
 
 void print_structure_term(std::ofstream &out, std::pair<std::string, Terminal*> pr) {
 
-    print_impl(out, "struct " + pr.first + " {\n");
+    print_impl(out, "struct " + pr.first + " : TerminalNode {\n");
     ++depth;
 
-    print_impl(out, "void parse();\n");
-    print_impl(out, "bool match();\n\n");
+//    print_impl(out, "static std::shared_ptr<" + "Node" + "> " + "parse();\n");
+    print_impl(out, "static Parser::" + pr.first + "* parse();\n");
+    print_impl(out, "static bool match();\n\n");
 
-    print_impl(out, "std::vector<std::regex> regs = {");
-    bool first = true;
-    for (auto &reg: pr.second->_regexps) {
-
-        if (!first) {
-
-            out << ", ";
-
-        }
-        first = false;
-        out << "std::regex(\"^" << normalize(reg) << "\")";
-
-    }
-    out << "};\n";
+    print_impl(out, "static const std::vector<std::regex> regs;\n");
+    print_impl(out, "std::string _value;");
 
     --depth;
     print_impl(out, "};\n\n");
 
 }
 
+void parse_attributes(std::string const &attr_s, std::vector<std::pair<std::string, std::string>> &attr_v) {
+
+    std::vector<std::string> decls;
+    split(attr_s, [](uint8_t c)
+    {
+        return (c == ',');
+    }, decls);
+
+    attr_v.resize(decls.size());
+    for ( size_t i = 0; i < decls.size(); i++ ) {
+
+        std::vector<std::string> tokens;
+        split(decls[i], isspace, tokens);
+        if (tokens.size() == 2) {
+
+            attr_v[i] = {tokens[0], tokens[1]};
+
+        } else {
+
+            std::cerr << "WARNING: wrong argument: " << decls[i] << std::endl;
+
+        }
+
+    }
+
+}
+
 void print_structure_var(std::ofstream &out, std::pair<std::string, Variable*> pr) {
 
-    print_impl(out, "struct " + pr.first + " {\n");
+    print_impl(out, "struct " + pr.first + " : VariableNode {\n");
     ++depth;
 
-    print_impl(out, "void parse(" + pr.second->_attr_s + ");\n");
+    print_impl(out, "static Parser::" + pr.first + "*" + " parse(" + pr.second->_attr_s + ");\n\n");
+
+    print_impl(out, "std::vector<Node*> children;\n\n");
+
+    std::vector<std::pair<std::string, std::string>> attr_v;
+    parse_attributes(pr.second->_attr_s, attr_v);
+
+    for (auto &attr: attr_v) {
+        print_impl(out, attr.first + " " + attr.second + ";\n");
+    }
 
     --depth;
     print_impl(out, "};\n\n");
@@ -528,6 +556,12 @@ void print_structure_var(std::ofstream &out, std::pair<std::string, Variable*> p
 void print_structures(std::ofstream &out) {
 
     out << "\n";
+
+    print_impl(out, "struct Node { };\n");
+
+    print_impl(out, "struct VariableNode : Node { };\n");
+
+    print_impl(out, "struct TerminalNode : Node { };\n");
 
     for (auto &pr: terminals) {
 
@@ -555,6 +589,7 @@ void print_header() {
     out << "#include <regex>\n";
     out << "#include <iostream>\n";
     out << "#include <vector>\n";
+    out << "#include <memory>\n";
     out << "\n\n";
 
     depth = 0;
@@ -562,10 +597,10 @@ void print_header() {
     print_impl(out, "struct Parser {\n\n");
     ++depth;
 
-    print_impl(out, "std::string s;\n");
-    print_impl(out, "int pos;\n\n");
+    print_impl(out, "static std::string s;\n");
+    print_impl(out, "static size_t pos;\n\n");
 
-    print_impl(out, "Parser(std::string s);\n");
+    print_impl(out, "Parser(std::string const &s);\n");
 
     print_structures(out);
 
@@ -609,14 +644,15 @@ void print_match_functions(std::ofstream &out) {
 
     for (auto &pr: terminals) {
 
-        print_impl(out, "void Parser::" + pr.first + "::match() {\n");
+        print_impl(out, "bool Parser::" + pr.first + "::match() {\n");
         ++depth;
 
         print_impl(out, "for (auto &reg: regs) {\n");
         ++depth;
 
         print_impl(out, "std::smatch sm;\n");
-        print_impl(out, "if (std::regex_search(s.begin() + pos, s.end(), sm, reg)) {\n");
+        print_impl(out, "std::string tmp_str(s.begin() + pos, s.end());\n");
+        print_impl(out, "if (std::regex_search(tmp_str, sm, reg)) {\n");
         ++depth;
 
         print_impl(out, "return true;\n");
@@ -652,43 +688,93 @@ void get_follow(std::string name, std::set<std::string> *fw) {
 
 void print_parse_token(std::ofstream &out, std::pair<std::string, std::string> child) {
 
-    print_impl(out, child.first + "::parse(" + child.second + ");\n");
+    print_impl(out, "result->children.push_back(" + child.first + "::parse(" + child.second + "));\n");
 
-    print_impl(out, "if (");
+//    print_impl(out, "if (");
 
-    bool first = true;
-    std::set<std::string> follow;
-    get_follow(child.first, &follow);
-    for (auto &f: follow) {
+//    bool first = true;
+//    std::set<std::string> follow;
+//    get_follow(child.first, &follow);
+//    for (auto &f: follow) {
 
-        if (!first) {
+//        if (!first) {
 
-            out << " && ";
+//            out << " && ";
 
-        }
-        first = false;
+//        }
+//        first = false;
 
-        out << "!" << f << "::match()";
+//        out << "!" << f << "::match()";
 
-    }
+//    }
 
-    out << ") {\n";
-    ++depth;
+//    out << ") {\n";
+//    ++depth;
 
-    print_impl(out, "std::cerr << \"WARNING: can not parse!!!\" << std::endl;\n");
-    print_impl(out, "exit(0);\n");
+//    print_impl(out, "std::cerr << \"WARNING: can not parse!!!\" << std::endl;\n");
+//    print_impl(out, "exit(0);\n");
 
-    --depth;
-    print_impl(out, "}\n");
+//    --depth;
+//    print_impl(out, "}\n");
 
 }
 
-void print_parse_functions(std::ofstream &out) {
+
+void print_parse_functions_terms(std::ofstream &out) {
+
+    for (auto &pr: terminals) {
+
+        print_impl(out, "Parser::" + pr.first + "* Parser::" + pr.first + "::parse() {\n");
+//        print_impl(out, "std::shared_ptr<Node> Parser::")
+        ++depth;
+
+        print_impl(out, pr.first + "* result = new " + pr.first + ";\n");
+
+        print_impl(out, "for (auto &reg: regs) {\n");
+        ++depth;
+
+        print_impl(out, "std::smatch sm;\n");
+        print_impl(out, "std::string tmp_str(s.begin() + pos, s.end());\n");
+        print_impl(out, "if (std::regex_search(tmp_str, sm, reg)) {\n");
+        ++depth;
+
+        print_impl(out, "size_t fp = sm.position(0);\n");
+        print_impl(out, "size_t len = sm.length(0);\n");
+        print_impl(out, "result->_value = tmp_str.substr(0, len);\n");
+        print_impl(out, "pos += len;\n");
+        print_impl(out, "return result;\n");
+
+        --depth;
+        print_impl(out, "}\n");
+
+        --depth;
+        print_impl(out, "}\n");
+
+        print_impl(out, "return nullptr;\n");
+
+        --depth;
+        print_impl(out, "}\n");
+
+    }
+
+}
+
+void print_parse_functions_vars(std::ofstream &out) {
 
     for (auto &pr: vars) {
 
-        print_impl(out, "void Parser::" + pr.first + "::parse(" + pr.second->_attr_s + ") {\n");
+        print_impl(out, "Parser::" + pr.first + "*" + " Parser::" + pr.first + "::parse(" + pr.second->_attr_s + ") {\n");
         depth++;
+
+        print_impl(out, pr.first + "* result(new " + pr.first + ");\n");
+
+        std::vector<std::pair<std::string, std::string>> attr_v;
+        parse_attributes(pr.second->_attr_s, attr_v);
+        for (auto &attr: attr_v) {
+
+            print_impl(out, "result->" + attr.second + " = " + attr.second + ";\n");
+
+        }
 
         for (auto &rule: pr.second->_cases) {
 
@@ -700,17 +786,42 @@ void print_parse_functions(std::ofstream &out) {
                 print_parse_token(out, child);
 
             }
+            print_impl(out, "return result;\n");
 
             --depth;
             print_impl(out, "}\n");
 
         }
 
+        print_impl(out, "return nullptr;\n");
+
         depth--;
         print_impl(out, "}\n\n");
 
     }
 
+}
+
+void print_regex_definitions(std::ofstream &out) {
+    for (auto &pr: terminals) {
+
+        print_impl(out, "const std::vector<std::regex> Parser::" + pr.first + "::" + "regs = {");
+
+        bool first = true;
+        for (auto &reg: pr.second->_regexps) {
+
+            if (!first) {
+
+                out << ", ";
+
+            }
+            first = false;
+            out << "std::regex(\"^" << normalize(reg) << "\")";
+
+        }
+        out << "};\n";
+
+    }
 }
 
 void print_source() {
@@ -721,11 +832,25 @@ void print_source() {
 
     depth = 0;
 
-    print_impl(out, "Parser::Parser(std::string &s) : s(s) {};\n\n");
+    print_impl(out, "std::string Parser::Parser::s;\n");
+    print_impl(out, "size_t Parser::Parser::pos = 0;\n\n");
+
+
+    print_impl(out, "Parser::Parser(std::string const &s) {\n");
+    ++depth;
+
+    print_impl(out, "Parser::s = s;\n");
+
+    --depth;
+    print_impl(out, "}\n\n");
+
+    print_regex_definitions(out);
 
     print_match_functions(out);
 
-    print_parse_functions(out);
+    print_parse_functions_terms(out);
+
+    print_parse_functions_vars(out);
 
     out.close();
 
