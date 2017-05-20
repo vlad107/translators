@@ -51,7 +51,7 @@ void visitor(std::ostream &out, Parser::Node *node)
             visitor(out, var->children[1]); // cond_expr
             out << " then begin\n";
 
-            visitor(out, var->children[3]);
+            visitor(out, var->children[2]);
 
             print_tabs(out, reinterpret_cast<Parser::if_expr*>(var)->depth);
             out << "end;\n";
@@ -103,7 +103,7 @@ label:
 
 int main()
 {
-    Parser parser("if < + 5 3 * 6 3 print 1235");
+    Parser parser("if < + 1 2 + 2 3 print + 1 2");
     auto root = Parser::start::parse();
     visitor(std::cout, root);
     return 0;

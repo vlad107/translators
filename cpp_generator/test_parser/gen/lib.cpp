@@ -568,18 +568,43 @@ Parser::cond_expr* Parser::cond_expr::parse() {
     cond_expr* result(new cond_expr);
     if (Not::match()) {
         result->children.push_back(unaryBoolOp::parse());
+        if ((!And::match()) and (!Eq::match()) and (!Gr::match()) and (!GrOrEq::match()) and (!Le::match()) and (!LeOrEq::match()) and (!Not::match()) and (!Or::match()) and (!Xor::match()))
+        {
+            std::cerr << "Parse error\n";
+            exit(1);
+        }
         result->children.push_back(cond_expr::parse());
         return result;
     }
     if (And::match() || Or::match() || Xor::match()) {
         result->children.push_back(binaryBoolOp::parse());
+        if ((!And::match()) and (!Eq::match()) and (!Gr::match()) and (!GrOrEq::match()) and (!Le::match()) and (!LeOrEq::match()) and (!Not::match()) and (!Or::match()) and (!Xor::match()))
+        {
+            std::cerr << "Parse error\n";
+            exit(1);
+        }
         result->children.push_back(cond_expr::parse());
+        if ((!And::match()) and (!Eq::match()) and (!Gr::match()) and (!GrOrEq::match()) and (!Le::match()) and (!LeOrEq::match()) and (!Not::match()) and (!Or::match()) and (!Xor::match()))
+        {
+            std::cerr << "Parse error\n";
+            exit(1);
+        }
         result->children.push_back(cond_expr::parse());
         return result;
     }
     if (Eq::match() || Gr::match() || GrOrEq::match() || Le::match() || LeOrEq::match()) {
         result->children.push_back(cmpDigits::parse());
+        if ((!Digit::match()) and (!Div::match()) and (!Minus::match()) and (!Mult::match()) and (!Plus::match()))
+        {
+            std::cerr << "Parse error\n";
+            exit(1);
+        }
         result->children.push_back(int_expr::parse());
+        if ((!Digit::match()) and (!Div::match()) and (!Minus::match()) and (!Mult::match()) and (!Plus::match()))
+        {
+            std::cerr << "Parse error\n";
+            exit(1);
+        }
         result->children.push_back(int_expr::parse());
         return result;
     }
@@ -614,21 +639,40 @@ Parser::if_expr* Parser::if_expr::parse(int depth) {
     result->depth = depth;
     if (If::match()) {
         result->children.push_back(If::parse());
+        if ((!And::match()) and (!Eq::match()) and (!Gr::match()) and (!GrOrEq::match()) and (!Le::match()) and (!LeOrEq::match()) and (!Not::match()) and (!Or::match()) and (!Xor::match()))
+        {
+            std::cerr << "Parse error\n";
+            exit(1);
+        }
         result->children.push_back(cond_expr::parse());
-        result->children.push_back(OPEN_BRACKET::parse());
+        if ((!If::match()) and (!Print::match()))
+        {
+            std::cerr << "Parse error\n";
+            exit(1);
+        }
         result->children.push_back(expr::parse(depth + 1));
-        result->children.push_back(CLOSE_BRACKET::parse());
         return result;
     }
     if (If::match()) {
         result->children.push_back(If::parse());
+        if ((!And::match()) and (!Eq::match()) and (!Gr::match()) and (!GrOrEq::match()) and (!Le::match()) and (!LeOrEq::match()) and (!Not::match()) and (!Or::match()) and (!Xor::match()))
+        {
+            std::cerr << "Parse error\n";
+            exit(1);
+        }
         result->children.push_back(cond_expr::parse());
-        result->children.push_back(OPEN_BRACKET::parse());
+        if ((!If::match()) and (!Print::match()))
+        {
+            std::cerr << "Parse error\n";
+            exit(1);
+        }
         result->children.push_back(expr::parse(depth + 1));
-        result->children.push_back(CLOSE_BRACKET::parse());
-        result->children.push_back(OPEN_BRACKET::parse());
+        if ((!If::match()) and (!Print::match()))
+        {
+            std::cerr << "Parse error\n";
+            exit(1);
+        }
         result->children.push_back(expr::parse(depth + 1));
-        result->children.push_back(CLOSE_BRACKET::parse());
         return result;
     }
     return nullptr;
@@ -638,12 +682,27 @@ Parser::int_expr* Parser::int_expr::parse() {
     int_expr* result(new int_expr);
     if (Div::match() || Minus::match() || Mult::match() || Plus::match()) {
         result->children.push_back(binaryDigitOp::parse());
+        if ((!Digit::match()) and (!Div::match()) and (!Minus::match()) and (!Mult::match()) and (!Plus::match()))
+        {
+            std::cerr << "Parse error\n";
+            exit(1);
+        }
         result->children.push_back(int_expr::parse());
+        if ((!Digit::match()) and (!Div::match()) and (!Minus::match()) and (!Mult::match()) and (!Plus::match()))
+        {
+            std::cerr << "Parse error\n";
+            exit(1);
+        }
         result->children.push_back(int_expr::parse());
         return result;
     }
     if (Minus::match()) {
         result->children.push_back(unaryDigitOp::parse());
+        if ((!Digit::match()) and (!Div::match()) and (!Minus::match()) and (!Mult::match()) and (!Plus::match()))
+        {
+            std::cerr << "Parse error\n";
+            exit(1);
+        }
         result->children.push_back(int_expr::parse());
         return result;
     }
@@ -686,6 +745,11 @@ Parser::void_expr* Parser::void_expr::parse(int depth) {
     result->depth = depth;
     if (Print::match()) {
         result->children.push_back(Print::parse());
+        if ((!Digit::match()) and (!Div::match()) and (!Minus::match()) and (!Mult::match()) and (!Plus::match()))
+        {
+            std::cerr << "Parse error\n";
+            exit(1);
+        }
         result->children.push_back(int_expr::parse());
         return result;
     }

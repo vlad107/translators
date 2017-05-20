@@ -21,7 +21,6 @@ void print_structure_term(std::ofstream &out, std::pair<std::string, Terminal*> 
     print_impl(out, "struct " + pr.first + " : TerminalNode {\n");
     ++depth;
 
-//    print_impl(out, "static std::shared_ptr<" + "Node" + "> " + "parse();\n");
     print_impl(out, "static Parser::" + pr.first + "* parse();\n");
     print_impl(out, "static bool match();\n\n");
     print_impl(out, "virtual NodeType get_structure_name() { return NodeType::e_" + pr.first + "; }\n");
@@ -278,10 +277,46 @@ void print_parse_functions_terms(std::ofstream &out) {
 
 }
 
-void print_parse_functions_vars(std::ofstream &out) {
+void print_follow_check(std::ofstream &out, std::vector<std::string> const &follow)
+{
+    std::string cond = "(";
+    bool first = true;
+    for (auto &f: follow)
+    {
+        if (!first)
+        {
+            cond += " and ";
+        }
+        first = false;
 
-    for (auto &pr: vars) {
+        if (f == DOLLAR)
+        {
+            cond += "(pos != s.size())";
+        } else
+        {
+            cond += "(!" + f + "::match()" + ")";
+        }
+    }
+    cond += ")";
 
+    if (cond != "()")
+    {
+        print_impl(out, "if " + cond + "\n");
+        print_impl(out, "{\n");
+        ++depth;
+
+        print_impl(out, "std::cerr << \"Parse error\\n\";\n");
+        print_impl(out, "exit(1);\n");
+
+        --depth;
+        print_impl(out, "}\n");
+    }
+}
+
+void print_parse_functions_vars(std::ofstream &out)
+{
+    for (auto &pr: vars)
+    {
         print_impl(out, "Parser::" + pr.first + "*" + " Parser::" + pr.first + "::parse(" + pr.second->_attr_s + ") {\n");
         depth++;
 
@@ -289,36 +324,35 @@ void print_parse_functions_vars(std::ofstream &out) {
 
         std::vector<std::pair<std::string, std::string>> attr_v;
         parse_attributes(pr.second->_attr_s, attr_v);
-        for (auto &attr: attr_v) {
-
+        for (auto &attr: attr_v)
+        {
             print_impl(out, "result->" + attr.second + " = " + attr.second + ";\n");
-
         }
-
-        for (auto &rule: pr.second->_cases) {
-
+        for (auto &rule: pr.second->_cases)
+        {
             print_rule_if(out, rule);
             ++depth;
 
-            for (auto &child: rule._children) {
+            for (auto it = rule._children.begin(); it != rule._children.end(); ++it)
+            {
+                print_parse_token(out, *it);
 
-                print_parse_token(out, child);
+                std::vector<std::string> follow;
+                add_first_by_rule(it + 1, rule._children.end(), follow);
 
+                print_follow_check(out, follow);
             }
             print_impl(out, "return result;\n");
 
             --depth;
             print_impl(out, "}\n");
-
         }
 
         print_impl(out, "return nullptr;\n");
 
         depth--;
         print_impl(out, "}\n\n");
-
     }
-
 }
 
 void print_regex_definitions(std::ofstream &out)
