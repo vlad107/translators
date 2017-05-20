@@ -115,7 +115,7 @@ void print_structures(std::ofstream &out)
 
 void print_header() {
 
-    std::ofstream out("../gen/lib.h", std::ofstream::out);
+    std::ofstream out("../cpp_generator/test_parser/gen/lib.h", std::ofstream::out);
 
     out << "#ifndef LIB_H\n";
     out << "#define LIB_H\n";
@@ -345,7 +345,7 @@ void print_regex_definitions(std::ofstream &out)
 void print_source()
 {
 
-    std::ofstream out("../gen/lib.cpp", std::ofstream::out);
+    std::ofstream out("../cpp_generator/test_parser/gen/lib.cpp", std::ofstream::out);
 
     out << "#include \"lib.h\"\n\n";
 
