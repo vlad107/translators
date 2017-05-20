@@ -9,7 +9,7 @@
 std::string const WS = "\t\r\n ";
 std::string const EPSILON = "EPSILON";
 std::string const DOLLAR = "DOLLAR";
-
+std::string const TAB = "    ";
 
 struct Rule {
     Rule();
@@ -46,20 +46,20 @@ struct Terminal {
 extern std::map<std::string, Variable*> vars;
 extern std::map<std::string, Terminal*> terminals;
 
-std::string &rtrim(std::string &s);
+void read_tokens(std::istream & in, std::vector<std::string> & tokens);
 
-std::string &ltrim(std::string &s);
-
-std::string &trim(std::string &s);
-
-void read_tokens(std::vector<std::string> *tokens);
-
-void add_rules(std::string s);
+void add_rules(std::string const & s);
 
 void generate_first(std::string const &var);
 
 void generate_follow(std::string const &var);
 
-void print_code();
+std::string &normalize(std::string &s, bool &literal, std::string const escaped = "()[]+*\"\'");
+
+void parse_attributes(std::string const &attr_s, std::vector<std::pair<std::string, std::string>> &attr_v);
+
+void add_first_by_rule(std::vector<std::pair<std::string, std::string>>::iterator const &rule_start,
+                       std::vector<std::pair<std::string, std::string>>::iterator const &rule_end,
+                       std::vector<std::string> &fst);
 
 #endif // HELPER_H
