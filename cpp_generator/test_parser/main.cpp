@@ -103,7 +103,7 @@ label:
 
 int main()
 {
-    Parser parser("if < + 1 2 + 2 3 print + 1 2");
+    Parser parser("print - 5 - 67 + 4 5");
     auto root = Parser::start::parse();
     visitor(std::cout, root);
     return 0;
