@@ -101,10 +101,27 @@ label:
     }
 }
 
+void print_tree(uint32_t depth, Parser::Node *node)
+{
+    print_tabs(std::cout, depth);
+//    std::cout << node->get_structure_name();
+    if (node->is_terminal())
+    {
+        std::cout << ": " << reinterpret_cast<Parser::TerminalNode*>(node)->_value << std::endl;
+    } else
+    {
+        for (auto &chld: reinterpret_cast<Parser::VariableNode*>(node)->children)
+        {
+            print_tree(depth + 1, chld);
+        }
+    }
+}
+
 int main()
 {
-    Parser parser("print - 5 - 67 + 4 5");
+    Parser parser("print 5");
     auto root = Parser::start::parse();
+    print_tree(0, root);
     visitor(std::cout, root);
     return 0;
 }

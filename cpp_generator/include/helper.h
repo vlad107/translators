@@ -62,4 +62,6 @@ void add_first_by_rule(std::vector<std::pair<std::string, std::string>>::iterato
                        std::vector<std::pair<std::string, std::string>>::iterator const &rule_end,
                        std::vector<std::string> &fst);
 
+void remove_left_recursion();
+
 #endif // HELPER_H

@@ -5,6 +5,7 @@
 #include <functional>
 #include <regex>
 #include <fstream>
+#include <queue>
 
 std::map<std::string, Variable*> vars;
 std::map<std::string, Terminal*> terminals;
@@ -342,45 +343,39 @@ void add_first_by_rule(std::vector<std::pair<std::string, std::string>>::iterato
 
 std::map<std::string, int> color;
 
-void generate_first(std::string const &var) {
-
-    if (vars.find(var) == vars.end()) {
-
+void generate_first(std::string const &var)
+{
+    if (vars.find(var) == vars.end())
+    {
         std::cerr << "WARNING: " << var << " was not declarated" << std::endl;
         return;
-
     }
 
     if (color[var] == 2) return;
 
-    if (color[var] == 1) {
-
+    if (color[var] == 1)
+    {
         std::cerr << "WARNING: cyclic grammar" << std::endl;
         std::cerr << "    trying to define " << var << " via " << var << std::endl;
         return;
-
     }
     color[var] = 1;
 
     auto *info = vars[var];
     bool was_eps = false;
 
-    for (auto &cs: info->_cases) {
-
-        if (cs._children.empty()) {
-
-            if (!was_eps) {
-
+    for (auto &cs: info->_cases)
+    {
+        if (cs._children.empty())
+        {
+            if (!was_eps)
+            {
                 info->_first.push_back(EPSILON);
-
             }
-
-        } else {
-
+        } else
+        {
             add_first_by_rule(cs._children.begin(), cs._children.end(), info->_first);
-
         }
-
     }
 
     std::sort(info->_first.begin(), info->_first.end());
@@ -392,7 +387,6 @@ void generate_first(std::string const &var) {
                   != info->_first.end());
 
     color[var] = 2;
-
 }
 
 void add_follow(std::string const &name, std::vector<std::string> const &follow)
@@ -482,16 +476,178 @@ void parse_attributes(std::string const &attr_s, std::vector<std::pair<std::stri
     }
 }
 
-void get_follow(std::string name, std::set<std::string> *fw) {
-
-    if (isupper(name[0])) {
-
+void get_follow(std::string name, std::set<std::string> *fw)
+{
+    if (isupper(name[0]))
+    {
         fw = &terminals[name]->_follow;
-
-    } else {
-
+    } else
+    {
         fw = &vars[name]->_follow;
+    }
+}
 
+std::map<std::string, bool> reach_eps;
+
+bool is_rule_eps(Rule &rule)
+{
+    for (auto &p: rule._children)
+    {
+        if ((is_terminal(p.first) && (!terminals[p.first]->_eps)) ||
+            (!is_terminal(p.first) && (!vars[p.first]->_eps)))
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+void make_eps() // slow algorithm
+{
+    bool found = true;
+    while (found)
+    {
+        found = false;
+        for ( auto &pr: vars )
+        {
+            if (!pr.second->_eps)
+            {
+                for ( auto &rule: pr.second->_cases )
+                {
+                    if (is_rule_eps(rule))
+                    {
+                        found = true;
+                        pr.second->_eps = true;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+}
+
+bool get_is_eps(std::string const & name)
+{
+    if (is_terminal(name))
+    {
+        return terminals[name]->_eps;
+    } else
+    {
+        return vars[name]->_eps;
+    }
+}
+
+void generate_cases(Rule &rule, std::vector<Rule> &res, Rule &cur_rule, uint32_t pos = 0)
+{
+    if (pos == rule._children.size())
+    {
+        res.push_back(cur_rule);
+        return;
     }
 
+    cur_rule._children.push_back(rule._children[pos]);
+    generate_cases(rule, res, cur_rule, pos + 1);
+    cur_rule._children.pop_back();
+
+    if (get_is_eps(rule._children[pos].first))
+    {
+        generate_cases(rule, res, cur_rule, pos + 1);
+    }
+}
+
+void remove_self_recursion(std::string &name)
+{
+    std::string name2 = name + "___" + name;
+    vars[name2] = new Variable();
+    vars[name2]->_attr_s = vars[name]->_attr_s;
+
+    std::vector<std::pair<std::string, std::string>> attr_v;
+    parse_attributes(vars[name]->_attr_s, attr_v);
+    bool first = true;
+    std::string str_attr;
+    for (auto attr: attr_v)
+    {
+        if (!first)
+        {
+            str_attr += ", ";
+        }
+        first = false;
+        str_attr += attr.second;
+    }
+    vars[name2]->_eps = false;
+
+    std::vector<Rule> n_cases;
+    for ( auto &rule: vars[name]->_cases )
+    {
+        if (rule._children.empty()) continue;
+
+        if (rule._children[0].first != name)
+        {
+            n_cases.push_back(rule);
+            n_cases.push_back(rule);
+            n_cases.back()._children.push_back({name2, str_attr});
+        } else
+        {
+            std::vector<std::pair<std::string, std::string>> nc(rule._children.begin() + 1, rule._children.end());
+            Rule rl;
+            rl._children = nc;
+            rl._empty = false;
+            vars[name2]->_cases.push_back(rl);
+            rl._children.push_back({name2, rule._children[0].second});
+            vars[name2]->_cases.push_back(rl);
+        }
+    }
+    vars[name]->_cases = n_cases;
+}
+
+void remove_left_recursion()
+{
+//    make_eps();
+//    for ( auto &pr: vars )
+//    {
+//        std::vector<Rule> n_cases;
+//        for ( auto &rule: pr.second->_cases )
+//        {
+//            Rule cur_rule;
+//            generate_cases(rule, n_cases, cur_rule);
+//        }
+//        pr.second->_cases = n_cases;
+//    }
+
+    std::vector<std::string> var_names;
+    std::map<std::string, uint32_t> rev_num;
+    for ( auto &pr: vars )
+    {
+        rev_num[pr.first] = var_names.size();
+        var_names.push_back(pr.first);
+    }
+    for ( uint32_t i = 0; i < var_names.size(); i++ )
+    {
+        std::vector<Rule> n_cases;
+        std::queue<Rule> q;
+        for (auto &rule: vars[var_names[i]]->_cases)
+        {
+            q.push(rule);
+        }
+        while (!q.empty())
+        {
+            auto rule = q.front();
+            q.pop();
+            if ((rule._children.size() > 0) && (!is_terminal(rule._children[0].first)) && (rev_num[rule._children[0].first] < i))
+            {
+                std::string str = rule._children[0].first;
+                for ( auto &str_rule: vars[str]->_cases)
+                {
+                    Rule t_rule = str_rule;
+                    t_rule._children.insert(t_rule._children.end(), rule._children.begin() + 1, rule._children.end());
+                    q.push(t_rule);
+                }
+            } else
+            {
+                n_cases.push_back(rule);
+            }
+        }
+        vars[var_names[i]]->_cases = n_cases;
+        remove_self_recursion(var_names[i]);
+    }
 }

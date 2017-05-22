@@ -27,6 +27,8 @@ int main(int argc, char *argv[])
 
     std::for_each(tokens.begin(), tokens.end(), add_rules);
 
+//    remove_left_recursion();
+
     for (const auto &pr: vars)
     {
         generate_first(pr.first);
