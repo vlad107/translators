@@ -165,7 +165,13 @@ void print_rule_if(std::ofstream &out, Rule &rule) {
         }
         first = false;
 
-        out << term << "::match()";
+        if (term == EPSILON)
+        {
+            out << "pos == s.size()";
+        } else
+        {
+            out << term << "::match()";
+        }
 
     }
 
@@ -285,7 +291,7 @@ void print_follow_check(std::ofstream &out, std::vector<std::string> const &foll
     {
         if (!first)
         {
-            cond += " and ";
+            cond += " && ";
         }
         first = false;
 
@@ -339,6 +345,13 @@ void print_parse_functions_vars(std::ofstream &out)
 
                 std::vector<std::string> follow;
                 add_first_by_rule(it + 1, rule._children.end(), follow);
+                for (auto &cur: follow)
+                {
+                    if (cur == EPSILON)
+                    {
+                        cur = DOLLAR;
+                    }
+                }
 
                 print_follow_check(out, follow);
             }

@@ -1,5 +1,4 @@
-start : expr ;
-expr : expr MULT expr | ZERO | ONE ;
-MULT : '*' ;
-ZERO : '0' ;
-ONE : '1' ;
+start: e ;
+e : ZERO e1 ;
+e1 : e |  ;
+ZERO : '0' ; 

@@ -65,7 +65,7 @@ std::string &normalize(std::string &s, bool &literal, std::string const escaped)
 }
 
 
-std::vector<std::string> &split(const std::string &s, std::function<bool(uint8_t)> issep, std::vector<std::string> &res) {
+std::vector<std::string> &split(const std::string &s, std::function<bool(uint8_t)> issep, std::vector<std::string> &res, bool need_empty = false) {
 
     const std::string op = "([{\"\'";
     const std::string cl = ")]}\"\'";
@@ -92,7 +92,7 @@ std::vector<std::string> &split(const std::string &s, std::function<bool(uint8_t
 
             } else {
 
-                if (!cur.empty()) {
+                if (!cur.empty() || need_empty) {
 
                     res.push_back(cur);
                     cur = "";
@@ -105,7 +105,7 @@ std::vector<std::string> &split(const std::string &s, std::function<bool(uint8_t
 
     }
 
-    if (!cur.empty()) {
+    if (!cur.empty() || need_empty) {
 
         res.push_back(cur);
 
@@ -292,7 +292,7 @@ void add_rules(std::string const & s)
     split(s.substr(index_delim + 1), [](char cur)
     {
         return cur == '|';
-    }, cases);
+    }, cases, true);
 
     if (!is_terminal(rule_s))
     {
@@ -311,18 +311,15 @@ void add_first_by_rule(std::vector<std::pair<std::string, std::string>>::iterato
                        std::vector<std::pair<std::string, std::string>>::iterator const &rule_end,
                        std::vector<std::string> &fst)
 {
-    for ( auto it = rule_start; it != rule_end; ++it )
+    auto it = rule_start;
+    for ( ; it != rule_end; ++it )
     {
         auto child = *it;
 
         if (is_terminal(child.first))
         {
             fst.push_back(child.first);
-            if (terminals[child.first]->_eps)
-            {
-                fst.push_back(EPSILON);
-
-            } else
+            if (!terminals[child.first]->_eps)
             {
                 break;
             }
@@ -338,6 +335,10 @@ void add_first_by_rule(std::vector<std::pair<std::string, std::string>>::iterato
                 break;
             }
         }
+    }
+    if (it == rule_end)
+    {
+        fst.push_back(EPSILON);
     }
 }
 
